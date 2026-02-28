@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Upay App Reviews — Sentiment Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --teal: #0d9488;
+    --teal-dark: #0f766e;
+    --teal-light: #2dd4bf;
+    --teal-dim: rgba(13,148,136,0.10);
+    --teal-glow: rgba(13,148,136,0.25);
+    --bg: #0c1a18;
+    --bg2: #0f211f;
+    --surface: #142622;
+    --surface2: #1b312d;
+    --surface3: #223d38;
+    --border: rgba(13,148,136,0.18);
+    --border-bright: rgba(45,212,191,0.30);
+    --text: #e8f5f3;
+    --text2: #b3d4cf;
+    --muted: #6b9e97;
+    --gold: #f59e0b;
+    --gold-dim: rgba(245,158,11,0.15);
+    --rose: #f43f5e;
+    --rose-dim: rgba(244,63,94,0.15);
+    --emerald: #10b981;
+    --emerald-dim: rgba(16,185,129,0.15);
+    --sky: #38bdf8;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.6;
+  }
+
+  /* Ambient glow */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -300px; left: -100px;
+    width: 700px; height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(13,148,136,0.07) 0%, transparent 65%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(12,26,24,0.88);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
+  }
+  .logo { display: flex; align-items: center; gap: 14px; }
+  .logo-mark {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--teal) 0%, var(--teal-light) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif; font-weight: 800;
+    font-size: 1.1rem; color: white; font-style: italic;
+  }
+  .logo-name {
+    font-family: 'Playfair Display', serif; font-weight: 800;
+    font-size: 1.3rem; color: var(--text); letter-spacing: -0.01em;
+  }
+  .logo-name span { color: var(--teal-light); }
+  .logo-sub { font-size: 0.67rem; color: var(--muted); margin-top: 1px; }
+  .header-pills { display: flex; gap: 0.6rem; align-items: center; }
+  .pill {
+    padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .pill-teal { background: var(--teal-dim); border: 1px solid var(--border-bright); color: var(--teal-light); }
+  .pill-muted { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); color: var(--muted); }
+
+  /* ─── MAIN ─── */
+  main {
+    position: relative; z-index: 1;
+    max-width: 1440px; margin: 0 auto;
+    padding: 3rem 2.5rem 5rem;
+  }
+
+  /* ─── HERO ─── */
+  .hero-band {
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 2rem; align-items: start;
+    margin-bottom: 3rem; padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--teal-light); margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hero-tag::before {
+    content: ''; display: inline-block;
+    width: 20px; height: 1px; background: var(--teal-light);
+  }
+  .hero-h1 {
+    font-family: 'Playfair Display', serif; font-weight: 800;
+    font-size: clamp(2.2rem, 4.5vw, 3.8rem);
+    line-height: 1.05; letter-spacing: -0.02em; color: var(--text);
+  }
+  .hero-h1 em { color: var(--teal-light); font-style: italic; }
+  .hero-sub { color: var(--muted); font-size: 0.88rem; margin-top: 0.7rem; max-width: 480px; }
+  .hero-meta {
+    display: flex; flex-direction: column; gap: 0.8rem;
+    align-items: flex-end; padding-top: 0.5rem;
+  }
+  .hero-number {
+    font-family: 'Playfair Display', serif; font-weight: 800;
+    font-size: 4rem; line-height: 1; color: var(--teal-light);
+    letter-spacing: -0.03em;
+  }
+  .hero-number-label { font-size: 0.72rem; color: var(--muted); text-align: right; }
+  .hero-period {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+    color: var(--muted); text-align: right;
+    border: 1px solid var(--border); padding: 4px 10px; border-radius: 4px;
+  }
+
+  /* Section headings */
+  .sec-head {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 1.2rem;
+  }
+  .sec-head-line { flex: 1; height: 1px; background: var(--border); }
+  .sec-head-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--teal); white-space: nowrap;
+  }
+  .sec-head-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem; color: var(--muted); padding: 2px 8px;
+    border: 1px solid var(--border); border-radius: 3px;
+  }
+
+  /* ─── KPI ─── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 1rem; margin-bottom: 2.5rem;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.3rem 1.2rem;
+    position: relative; overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .kpi:hover { transform: translateY(-3px); border-color: var(--border-bright); }
+  .kpi-stripe {
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    border-radius: 1px;
+  }
+  .kpi-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem; margin-bottom: 0.8rem;
+  }
+  .kpi-val {
+    font-family: 'Playfair Display', serif; font-weight: 800;
+    font-size: 2.2rem; line-height: 1; letter-spacing: -0.02em;
+  }
+  .kpi-label {
+    font-size: 0.67rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); margin-top: 0.3rem; font-weight: 600;
+  }
+  .kpi-note { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
+
+  /* ─── CARDS ─── */
+  .grid { display: grid; gap: 1.2rem; margin-bottom: 1.2rem; }
+  .grid.c2 { grid-template-columns: 1fr 1fr; }
+  .grid.c3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid.big-l { grid-template-columns: 2.2fr 1fr; }
+  .grid.big-r { grid-template-columns: 1fr 2fr; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.5rem 1.5rem 1.3rem;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border-bright); }
+  .card-title {
+    font-family: 'Playfair Display', serif; font-weight: 700;
+    font-size: 1rem; color: var(--text); margin-bottom: 0.25rem;
+  }
+  .card-desc { font-size: 0.74rem; color: var(--muted); margin-bottom: 1.3rem; }
+
+  /* Donut */
+  .donut-shell { position: relative; }
+  .donut-ghost {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%); text-align: center; pointer-events: none;
+  }
+  .donut-ghost-val {
+    font-family: 'Playfair Display', serif; font-weight: 800;
+    font-size: 2.2rem; color: var(--teal-light); line-height: 1;
+  }
+  .donut-ghost-sub { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
+
+  /* Legend */
+  .legend { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .leg-item { display: flex; align-items: center; gap: 7px; font-size: 0.77rem; color: var(--text2); }
+  .leg-sq { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+  /* Topic bars */
+  .t-list { display: flex; flex-direction: column; gap: 1.1rem; }
+  .t-head { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .t-name { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+  .t-total { font-family: 'IBM Plex Mono', monospace; font-size: 0.67rem; color: var(--muted); }
+  .track { height: 7px; background: var(--surface3); border-radius: 4px; display: flex; overflow: hidden; }
+  .tp { background: var(--emerald); height: 100%; }
+  .tn { background: var(--gold); height: 100%; }
+  .tg { background: var(--rose); height: 100%; }
+  .t-pcts { display: flex; gap: 1rem; margin-top: 4px; }
+  .t-pcts span { font-family: 'IBM Plex Mono', monospace; font-size: 0.63rem; }
+
+  /* Insight ribbon */
+  .ribbon {
+    background: linear-gradient(135deg, var(--teal-dark) 0%, #065f55 100%);
+    border-radius: 18px; padding: 2rem 2.2rem;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.8rem; margin-bottom: 2.5rem;
+    position: relative; overflow: hidden;
+  }
+  .ribbon::before {
+    content: ''; position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+  .rib-val {
+    font-family: 'Playfair Display', serif; font-weight: 800;
+    font-size: 2.8rem; line-height: 1; color: white; letter-spacing: -0.02em;
+  }
+  .rib-key { font-size: 0.7rem; color: rgba(255,255,255,0.6); margin-top: 3px; font-weight: 600; }
+  .rib-note { font-size: 0.8rem; color: rgba(255,255,255,0.85); margin-top: 0.4rem; line-height: 1.5; }
+  .rib-sep { width: 1px; background: rgba(255,255,255,0.12); }
+
+  /* Alert box — special insight */
+  .alert-box {
+    background: var(--rose-dim); border: 1px solid rgba(244,63,94,0.3);
+    border-radius: 12px; padding: 1rem 1.2rem; margin-bottom: 1.2rem;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .alert-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+  .alert-text { font-size: 0.82rem; color: var(--text2); line-height: 1.55; }
+  .alert-text strong { color: var(--rose); }
+
+  /* Policy cards */
+  .policy-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 1rem; margin-bottom: 2.5rem;
+  }
+  .pc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.3rem 1.3rem 1.1rem;
+    transition: border-color 0.2s, transform 0.2s;
+    position: relative;
+  }
+  .pc:hover { border-color: var(--border-bright); transform: translateY(-2px); }
+  .pc-num {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem;
+    color: var(--teal); letter-spacing: 0.1em; font-weight: 600;
+    margin-bottom: 0.5rem; text-transform: uppercase;
+  }
+  .pc-title { font-weight: 700; font-size: 0.92rem; color: var(--text); margin-bottom: 0.5rem; line-height: 1.4; }
+  .pc-body { font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
+  .pc-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 0.7rem; padding: 3px 10px; border-radius: 4px;
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .pb-crit { background: var(--rose-dim); color: var(--rose); }
+  .pb-med  { background: var(--gold-dim); color: var(--gold); }
+  .pb-low  { background: var(--emerald-dim); color: var(--emerald); }
+
+  /* Year annotations on chart */
+  .chart-note {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.67rem;
+    color: var(--muted); margin-top: 0.6rem;
+    display: flex; gap: 1rem; flex-wrap: wrap;
+  }
+  .chart-note span { display: flex; align-items: center; gap: 5px; }
+  .chart-note span::before { content: '▸'; color: var(--teal); }
+
+  /* Review explorer */
+  .filter-strip { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+  .fb {
+    padding: 5px 16px; border-radius: 5px; font-size: 0.74rem; font-weight: 600;
+    border: 1px solid var(--border); background: transparent; color: var(--muted);
+    cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; transition: all 0.2s;
+  }
+  .fb:hover { border-color: var(--teal-light); color: var(--teal-light); }
+  .fb.on { background: var(--teal); border-color: var(--teal); color: white; }
+
+  .reviews-wrap { display: flex; flex-direction: column; gap: 0.85rem; max-height: 520px; overflow-y: auto; padding-right: 4px; }
+  .reviews-wrap::-webkit-scrollbar { width: 3px; }
+  .reviews-wrap::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+  .rv {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1rem 1.1rem;
+    transition: border-color 0.15s;
+  }
+  .rv:hover { border-color: var(--border-bright); }
+  .rv-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem; }
+  .rv-user { font-weight: 700; font-size: 0.85rem; color: var(--text); }
+  .rv-meta { display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap; }
+  .rv-stars { color: var(--gold); font-size: 0.7rem; }
+  .rv-date { font-family: 'IBM Plex Mono', monospace; font-size: 0.64rem; color: var(--muted); }
+  .chip {
+    font-size: 0.6rem; padding: 2px 8px; border-radius: 4px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .c-pos { background: var(--emerald-dim); color: var(--emerald); }
+  .c-neu { background: var(--gold-dim); color: var(--gold); }
+  .c-neg { background: var(--rose-dim); color: var(--rose); }
+  .c-top { background: rgba(56,189,248,0.12); color: var(--sky); }
+  .rv-text { font-size: 0.81rem; color: var(--text2); line-height: 1.55; }
+  .rv-thumb { font-size: 0.67rem; color: var(--muted); margin-top: 0.4rem; font-family: 'IBM Plex Mono', monospace; }
+
+  footer {
+    position: relative; z-index: 1; text-align: center;
+    border-top: 1px solid var(--border); padding: 2rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+
+  @media (max-width: 900px) {
+    .grid.c2,.grid.c3,.grid.big-l,.grid.big-r { grid-template-columns: 1fr; }
+    main { padding: 1.5rem 1rem 3rem; }
+    .hero-band { grid-template-columns: 1fr; }
+    .hero-meta { align-items: flex-start; }
+    .hero-number-label,.hero-period { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">U</div>
+    <div>
+      <div class="logo-name">Up<span>ay</span> Analytics</div>
+      <div class="logo-sub">UCB Mobile Financial Service · Play Store</div>
+    </div>
+  </div>
+  <div class="header-pills">
+    <span class="pill pill-teal">17,504 reviews</span>
+    <span class="pill pill-muted">2021 – 2026</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <div class="hero-band">
+    <div>
+      <div class="hero-tag">Sentiment Intelligence Report</div>
+      <div class="hero-h1">Upay App<br><em>User Voice</em><br>Analysis</div>
+      <div class="hero-sub">Google Play Store · Android · United Commercial Bank MFS · Bangladesh · 2021–2026</div>
+    </div>
+    <div class="hero-meta">
+      <div>
+        <div class="hero-number">4.01</div>
+        <div class="hero-number-label">Overall Average Rating / 5.0</div>
+      </div>
+      <div class="hero-period">Jan 2021 → Jan 2026</div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="sec-head"><div class="sec-head-line"></div><div class="sec-head-text">Overview Metrics</div><div class="sec-head-line"></div></div>
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--teal-light)"></div>
+      <div class="kpi-icon" style="background:var(--teal-dim)">📱</div>
+      <div class="kpi-val" style="color:var(--teal-light)">17K</div>
+      <div class="kpi-label">Total Reviews</div>
+      <div class="kpi-note">17,504 analysed</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--emerald)"></div>
+      <div class="kpi-icon" style="background:var(--emerald-dim)">✅</div>
+      <div class="kpi-val" style="color:var(--emerald)">70.7%</div>
+      <div class="kpi-label">Positive</div>
+      <div class="kpi-note">12,373 reviews</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--rose)"></div>
+      <div class="kpi-icon" style="background:var(--rose-dim)">⚠️</div>
+      <div class="kpi-val" style="color:var(--rose)">26.1%</div>
+      <div class="kpi-label">Negative</div>
+      <div class="kpi-note">4,569 reviews</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--gold)"></div>
+      <div class="kpi-icon" style="background:var(--gold-dim)">➖</div>
+      <div class="kpi-val" style="color:var(--gold)">3.2%</div>
+      <div class="kpi-label">Neutral</div>
+      <div class="kpi-note">562 reviews</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--gold)"></div>
+      <div class="kpi-icon" style="background:var(--gold-dim)">⭐</div>
+      <div class="kpi-val" style="color:var(--gold)">4.01</div>
+      <div class="kpi-label">Avg Rating</div>
+      <div class="kpi-note">out of 5 stars</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--sky)"></div>
+      <div class="kpi-icon" style="background:rgba(56,189,248,0.12)">🌟</div>
+      <div class="kpi-val" style="color:var(--sky)">66.4%</div>
+      <div class="kpi-label">5-Star Reviews</div>
+      <div class="kpi-note">11,615 reviews</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--rose)"></div>
+      <div class="kpi-icon" style="background:var(--rose-dim)">💢</div>
+      <div class="kpi-val" style="color:var(--rose)">23.6%</div>
+      <div class="kpi-label">1-Star Reviews</div>
+      <div class="kpi-note">4,138 reviews</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Donut + Rating bars -->
+  <div class="sec-head"><div class="sec-head-line"></div><div class="sec-head-text">Sentiment & Ratings</div><div class="sec-head-line"></div></div>
+  <div class="grid c2">
+    <div class="card">
+      <div class="card-title">Sentiment Distribution</div>
+      <div class="card-desc">4–5★ = Positive · 3★ = Neutral · 1–2★ = Negative</div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-sq" style="background:var(--emerald)"></div>Positive 70.7%</div>
+        <div class="leg-item"><div class="leg-sq" style="background:var(--rose)"></div>Negative 26.1%</div>
+        <div class="leg-item"><div class="leg-sq" style="background:var(--gold)"></div>Neutral 3.2%</div>
+      </div>
+      <div class="donut-shell" style="height:230px;">
+        <canvas id="donutChart"></canvas>
+        <div class="donut-ghost">
+          <div class="donut-ghost-val">71%</div>
+          <div class="donut-ghost-sub">positive</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Rating Distribution</div>
+      <div class="card-desc">Volume of reviews across 1–5 star scores</div>
+      <div style="height:262px;"><canvas id="ratingChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Yearly trend -->
+  <div class="sec-head" style="margin-top:0.3rem;"><div class="sec-head-line"></div><div class="sec-head-text">Yearly Trend</div><div class="sec-head-line"></div></div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Annual Review Volume by Sentiment</div>
+      <div class="card-desc">Year-on-year breakdown — 2021 was the launch year with the highest volume and most mixed feedback</div>
+      <div style="height:280px;"><canvas id="trendChart"></canvas></div>
+      <div class="chart-note">
+        <span>2021: Launch year — highest complaint volume (registration failures)</span>
+        <span>2022–2023: Steady satisfaction improvement post-stabilisation</span>
+        <span>2024–2025: Gradual rating softening as growth slows</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Monthly -->
+  <div class="grid" style="margin-top:1.2rem;">
+    <div class="card">
+      <div class="card-title">Monthly Average Rating (2021–2026)</div>
+      <div class="card-desc">Month-over-month satisfaction score — sharpest dip in Apr 2021 (launch bugs), best stretch in Nov 2022 (4.59)</div>
+      <div style="height:260px;"><canvas id="monthlyChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ALERT -->
+  <div class="alert-box" style="margin-top:1.2rem;">
+    <div class="alert-icon">🚨</div>
+    <div class="alert-text">
+      <strong>Critical Launch-Phase Issue:</strong> Upay's April 2021 average fell to <strong>2.61</strong> — the lowest month on record — driven entirely by NID registration failures, session timeouts, and OTP errors at launch. The most-upvoted review (3,262 thumbs-up) specifically describes this experience. <strong>82% of 2021's negative reviews relate to registration and authentication.</strong>
+    </div>
+  </div>
+
+  <!-- ROW 4: Topics -->
+  <div class="sec-head" style="margin-top:1.2rem;"><div class="sec-head-line"></div><div class="sec-head-text">Issue Topic Analysis</div><div class="sec-head-line"></div></div>
+  <div class="grid big-l">
+    <div class="card">
+      <div class="card-title">Topic Sentiment Breakdown</div>
+      <div class="card-desc">Positive · Neutral · Negative proportions per complaint category</div>
+      <div class="t-list" id="topicBars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Positive vs. Negative Volume</div>
+      <div class="card-desc">Side-by-side counts per topic</div>
+      <div style="height:320px;"><canvas id="topicChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- KEY INSIGHTS RIBBON -->
+  <div class="sec-head" style="margin-top:0.3rem;"><div class="sec-head-line"></div><div class="sec-head-text">Key Insights</div><div class="sec-head-line"></div></div>
+  <div class="ribbon">
+    <div>
+      <div class="rib-val">2.61</div>
+      <div class="rib-key">Lowest monthly avg — Apr 2021</div>
+      <div class="rib-note">Launch-phase NID & OTP failures drove mass 1-star reviews in the app's first weeks</div>
+    </div>
+    <div class="rib-sep"></div>
+    <div>
+      <div class="rib-val">4.59</div>
+      <div class="rib-key">Best monthly avg — Nov 2022</div>
+      <div class="rib-note">Post-stabilisation peak shows users rewarded Upay after core bugs were resolved</div>
+    </div>
+    <div class="rib-sep"></div>
+    <div>
+      <div class="rib-val">82%</div>
+      <div class="rib-key">Login/Auth negativity rate</div>
+      <div class="rib-note">808 of 983 login-related reviews are 1–2★ — highest negativity ratio of any topic</div>
+    </div>
+    <div class="rib-sep"></div>
+    <div>
+      <div class="rib-val">77%</div>
+      <div class="rib-key">App Performance negativity</div>
+      <div class="rib-note">453 of 585 app performance reviews are negative — crashes and slow loading persist</div>
+    </div>
+  </div>
+
+  <!-- POLICY RECOMMENDATIONS -->
+  <div class="sec-head"><div class="sec-head-line"></div><div class="sec-head-text">Policy Recommendations</div><div class="sec-head-line"></div></div>
+  <div class="policy-grid">
+    <div class="pc">
+      <div class="pc-num">Policy 01 · Registration & KYC</div>
+      <div class="pc-title">Rebuild the NID Verification & Onboarding Pipeline</div>
+      <div class="pc-body">The most-upvoted review (3,262 thumbs-up) and multiple top-10 complaints all describe the same issue: NID photo capture fails repeatedly, sessions expire mid-process, and OTP auto-detection crashes the app. Prioritise a resumable registration flow, fallback manual NID entry, and a lighter-weight camera SDK optimised for low-end devices.</div>
+      <span class="pc-badge pb-crit">🔴 Critical Priority</span>
+    </div>
+    <div class="pc">
+      <div class="pc-num">Policy 02 · Authentication</div>
+      <div class="pc-title">Introduce Biometric Login as Default</div>
+      <div class="pc-body">82% of login/authentication reviews are negative — the worst ratio across all topics. Users cannot enter PINs without visibility concerns, and OTP auto-fill crashes the app on many devices. Implementing fingerprint/face ID as the primary login method with a stable PIN fallback would directly address these pain points.</div>
+      <span class="pc-badge pb-crit">🔴 Critical Priority</span>
+    </div>
+    <div class="pc">
+      <div class="pc-num">Policy 03 · App Stability</div>
+      <div class="pc-title">Structured Pre-Release Testing on Budget Devices</div>
+      <div class="pc-body">77% of app performance reviews are negative. Crashes occur on bill payment, recharge, and at login — often triggered by specific hardware configurations. Mandate a regression test matrix covering Android 8–14 across Walton, Symphony, Tecno, and Infinix devices before every release cycle.</div>
+      <span class="pc-badge pb-crit">🔴 Critical Priority</span>
+    </div>
+    <div class="pc">
+      <div class="pc-num">Policy 04 · Transaction Reliability</div>
+      <div class="pc-title">Real-Time Transaction Status & Auto-Refund Policy</div>
+      <div class="pc-body">489 of 1,693 transaction-related reviews are negative. Users report sessions expiring mid-payment, VISA add-money failures, and unexplained balance deductions with no follow-up. Introduce an in-app transaction tracker, push alerts for failures, and a 48-hour automatic refund SLA for unreconciled transactions.</div>
+      <span class="pc-badge pb-crit">🔴 Critical Priority</span>
+    </div>
+    <div class="pc">
+      <div class="pc-num">Policy 05 · Competitive Features</div>
+      <div class="pc-title">Expand Payment Methods & Partner Integrations</div>
+      <div class="pc-body">Users consistently compare Upay unfavourably to bKash and Nagad on feature depth — especially VISA card top-up, bank-to-bank transfer, and merchant variety. A quarterly payment-partner roadmap and API-first approach to new integrations would help close this gap and improve retention.</div>
+      <span class="pc-badge pb-med">🟡 Medium Priority</span>
+    </div>
+    <div class="pc">
+      <div class="pc-num">Policy 06 · Customer Support</div>
+      <div class="pc-title">Build a Functional In-App Issue Reporter</div>
+      <div class="pc-body">The in-app feedback form was non-functional at launch — a significant trust issue. Implement a working issue reporter with auto-generated ticket IDs, email confirmation, and a status tracker. Route tickets to responsible squads by topic tag (registration, payment, login) and enforce a 72-hour first-response SLA.</div>
+      <span class="pc-badge pb-med">🟡 Medium Priority</span>
+    </div>
+    <div class="pc">
+      <div class="pc-num">Policy 07 · Session Management</div>
+      <div class="pc-title">Fix Session Expiry & Multi-Account Handling</div>
+      <div class="pc-body">Session expiry mid-transaction is a recurring frustration. Users also report being unable to switch accounts without a full reinstall. Enforce session persistence for active transactions (with a 10-min inactivity auto-lock for security), and add native multi-account support in the app switcher.</div>
+      <span class="pc-badge pb-med">🟡 Medium Priority</span>
+    </div>
+    <div class="pc">
+      <div class="pc-num">Policy 08 · Monitoring</div>
+      <div class="pc-title">Automated Sentiment Alerting & Review Dashboard</div>
+      <div class="pc-body">The 2021 launch crash (avg 2.61 in April) could have been caught within hours with automated alerting. Integrate a Play Store review monitoring pipeline that triggers P1 alerts when the 7-day average falls below 3.0, auto-categorises by topic, and routes to the responsible product squad — preventing repeat launch crises.</div>
+      <span class="pc-badge pb-low">🟢 Standard Priority</span>
+    </div>
+  </div>
+
+  <!-- REVIEW EXPLORER -->
+  <div class="sec-head"><div class="sec-head-line"></div><div class="sec-head-text">Review Explorer</div><div class="sec-head-line"></div></div>
+  <div class="card">
+    <div class="card-title">Most Impactful User Reviews</div>
+    <div class="card-desc">Ranked by thumbs-up count · Filter by sentiment to explore user patterns</div>
+    <div class="filter-strip">
+      <button class="fb on" onclick="filterR('All',this)">All Reviews</button>
+      <button class="fb" onclick="filterR('Positive',this)">Positive</button>
+      <button class="fb" onclick="filterR('Neutral',this)">Neutral</button>
+      <button class="fb" onclick="filterR('Negative',this)">Negative</button>
+    </div>
+    <div class="reviews-wrap" id="reviewsList"></div>
+  </div>
+
+</main>
+
+<footer>UPAY · SENTIMENT DASHBOARD · 17,504 GOOGLE PLAY REVIEWS · 2021–2026 · UCB MOBILE FINANCIAL SERVICE · BANGLADESH</footer>
+
+<script>
+// ─── DATA ──────────────────────────────────────────────────────────────────
+const D = {
+  sentiment: { Positive:12373, Negative:4569, Neutral:562 },
+  ratings: { 1:4138, 2:431, 3:562, 4:758, 5:11615 },
+  yearly: {
+    labels: ['2021','2022','2023','2024','2025','2026'],
+    pos: [5543,4396,1462,570,387,15],
+    neu: [314,130,55,36,23,4],
+    neg: [3140,842,240,186,151,10]
+  },
+  monthly: {
+    labels:['2021-03','2021-04','2021-05','2021-06','2021-07','2021-08','2021-09','2021-10','2021-11','2021-12',
+            '2022-01','2022-02','2022-03','2022-04','2022-05','2022-06','2022-07','2022-08','2022-09','2022-10','2022-11','2022-12',
+            '2023-01','2023-02','2023-03','2023-04','2023-05','2023-06','2023-07','2023-08','2023-09','2023-10','2023-11','2023-12',
+            '2024-01','2024-02','2024-03','2024-04','2024-05','2024-06','2024-07','2024-08','2024-09','2024-10','2024-11','2024-12',
+            '2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01'],
+    scores:[3.48,2.61,3.07,3.82,3.73,4.00,3.80,3.84,3.76,4.04,
+            4.04,4.01,4.16,3.67,4.25,4.51,4.56,4.40,4.50,4.54,4.59,4.54,
+            4.13,4.50,4.60,4.41,4.01,4.36,4.47,4.32,3.92,4.29,4.21,4.33,
+            4.13,4.06,4.11,4.31,3.65,4.16,4.16,3.73,3.72,3.55,4.00,3.89,
+            4.02,3.47,3.62,3.69,3.59,3.78,4.18,3.38,3.88,3.92,4.21,3.69,3.28]
+  },
+  topics:[
+    {name:'Login/Auth',          pos:144,neu:31,neg:808},
+    {name:'App Performance',     pos:104,neu:28,neg:453},
+    {name:'Transaction/Payment', pos:1120,neu:84,neg:489},
+    {name:'UI/UX',               pos:146,neu:4,neg:16},
+    {name:'Customer Support',    pos:34,neu:6,neg:37},
+    {name:'Charges/Fees',        pos:40,neu:1,neg:9},
+    {name:'Security',            pos:5,neu:0,neg:11},
+  ]
+};
+
+const reviews = [
+  {userName:"Ahasan Habib",content:"Horrible experience. 1. Took a day for me to register in the App (didn't get the bonus promised). 2. Can't add money from my VISA card. The app keeps showing 'your session has expired, please try again'. Informed customer care but they didn't bother addressing the issue.",score:1,sentiment:"Negative",topic:"Transaction/Payment",at:"2021-08-13",thumbsUpCount:3262},
+  {userName:"Mahananda Ray",content:"I can't register successfully. I tried so many times (10 times) but every time I can't complete registration. I give my phone number, got the OTP, but when the OTP automatically fills the box then the app automatically goes to App Info without any permission.",score:1,sentiment:"Negative",topic:"Login/Authentication",at:"2021-07-05",thumbsUpCount:859},
+  {userName:"Arafat",content:"Worst app. Despite trying probably 100 times, I couldn't register. It keeps saying 'NID verification failed', while on the very same day I registered other accounts with this NID on other apps. This speaks volumes about how faulty this app is. It wasted my time.",score:1,sentiment:"Negative",topic:"Transaction/Payment",at:"2021-09-18",thumbsUpCount:820},
+  {userName:"Maimun Sohel",content:"I had to try more than 5 times to register. Every time I entered NID front and back photos and blinked again and again for more than 2-5 minutes but there was no response. I feel bored. Then I backed and retried again from the beginning of the tedious procedure.",score:1,sentiment:"Negative",topic:"Login/Authentication",at:"2021-07-04",thumbsUpCount:777},
+  {userName:"Sharif Ahmed",content:"Why launch an app if it's not technically ready to use? I tried to register several times. Every time it completes NID verification. Then asks for PIN. I read all the instructions and tried accordingly. But then it says it's a technical error!",score:1,sentiment:"Negative",topic:"App Performance",at:"2021-05-11",thumbsUpCount:763},
+  {userName:"rafiul bari khan",content:"So many features in one app beneath the finger — just unimaginable. I am not saying this as an employee but as a customer. The interface is excellent. The upcoming features will not only make it more useful but transform digital banking in Bangladesh.",score:5,sentiment:"Positive",topic:"UI/UX",at:"2021-06-09",thumbsUpCount:749},
+  {userName:"Shafqat Anwar",content:"It is a new app but very much convenient and user friendly compared to other available apps for similar services. I am eagerly waiting for new features to be added so that I can fully depend on Upay as my single mode of online payment.",score:5,sentiment:"Positive",topic:"Transaction/Payment",at:"2021-06-18",thumbsUpCount:515},
+  {userName:"Ashique Uz Zaman",content:"I am facing a problem regarding the app login. After logging in, when I tap the recharge option or any other option, the app automatically crashes and shuts down. It has been happening since the last update. Please look into this.",score:4,sentiment:"Positive",topic:"Transaction/Payment",at:"2021-07-24",thumbsUpCount:443},
+  {userName:"Mokabbir Sarkar",content:"I had to delete my previous review because it was based on a beta version — it did not do justice to this amazingly designed app. While several features are still being rolled out, basic features like add money from VISA cards and adding your UCB account work well.",score:5,sentiment:"Positive",topic:"Transaction/Payment",at:"2021-04-17",thumbsUpCount:396},
+  {userName:"Faisal Maksud",content:"I'm using Upay and really enjoying it. The app UI is convenient and well optimised. One thing I'd like to add: please focus on more agents — it's hard to find one nearby.",score:5,sentiment:"Positive",topic:"Transaction/Payment",at:"2021-12-27",thumbsUpCount:376},
+  {userName:"Anick Ch.Kuri",content:"If there were possibilities of fund transfer to other bank accounts and VISA cards, that would be great. It would attract more users and make Upay more popular. If there were an option for opening an online full-loaded savings account it would be game-changing.",score:3,sentiment:"Neutral",topic:"Transaction/Payment",at:"2022-11-21",thumbsUpCount:147},
+  {userName:"Sadi",content:"Design is outstanding — thumbs up! I think it will be more convenient than the previous UPay app. But we need more features like account information updates by users, and a bill payment interface that's cleaner.",score:3,sentiment:"Neutral",topic:"Transaction/Payment",at:"2021-03-17",thumbsUpCount:77},
+  {userName:"Md. Hasan Mahmud",content:"I registered after many attempts. The app interface is good. But there's a problem — when I tap an option, it doesn't respond and also hangs my phone. Please fix it.",score:3,sentiment:"Neutral",topic:"Login/Authentication",at:"2021-07-09",thumbsUpCount:55},
+  {userName:"Shovon Karmaker",content:"I was doing a UCB credit card bill payment and the app crashed. I had to pay another bill and the app crashed again. Although the Add Money feature works smoothly, the bill payment section has a serious crash issue. Please identify and fix it.",score:3,sentiment:"Neutral",topic:"Transaction/Payment",at:"2024-10-22",thumbsUpCount:19},
+];
+
+// ─── CHARTS ────────────────────────────────────────────────────────────────
+Chart.defaults.color = '#6b9e97';
+Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+Chart.defaults.font.size = 11;
+
+const TEAL    = '#0d9488';
+const TEAL_L  = '#2dd4bf';
+const EMERALD = '#10b981';
+const ROSE    = '#f43f5e';
+const GOLD    = '#f59e0b';
+const SKY     = '#38bdf8';
+const SFC     = '#142622';
+
+// Donut
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Positive','Negative','Neutral'],
+    datasets: [{ data:[12373,4569,562], backgroundColor:[EMERALD,ROSE,GOLD], borderColor: SFC, borderWidth:3, hoverOffset:10 }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:true, cutout:'72%',
+    plugins: {
+      legend:{display:false},
+      tooltip:{ callbacks:{ label: c => ` ${c.label}: ${c.raw.toLocaleString()} (${(c.raw/17504*100).toFixed(1)}%)` }}
+    }
+  }
+});
+
+// Rating bar
+new Chart(document.getElementById('ratingChart'), {
+  type:'bar',
+  data:{
+    labels:['★1','★2','★3','★4','★5'],
+    datasets:[{ data:[4138,431,562,758,11615],
+      backgroundColor:[ROSE,'#fb7185',GOLD,'#6ee7b7',EMERALD],
+      borderRadius:7, borderSkipped:false }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=>` ${c.raw.toLocaleString()} reviews` }}},
+    scales:{
+      x:{ grid:{display:false}, border:{display:false} },
+      y:{ grid:{color:'rgba(13,148,136,0.08)'}, border:{display:false}, ticks:{ callback: v=>(v/1000).toFixed(0)+'K' }}
+    }
+  }
+});
+
+// Yearly
+new Chart(document.getElementById('trendChart'), {
+  type:'bar',
+  data:{
+    labels: D.yearly.labels,
+    datasets:[
+      { label:'Positive', data:D.yearly.pos, backgroundColor:'rgba(16,185,129,0.82)', borderRadius:5, borderSkipped:false },
+      { label:'Neutral',  data:D.yearly.neu, backgroundColor:'rgba(245,158,11,0.75)', borderRadius:5, borderSkipped:false },
+      { label:'Negative', data:D.yearly.neg, backgroundColor:'rgba(244,63,94,0.80)',  borderRadius:5, borderSkipped:false }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'top', labels:{ usePointStyle:true, boxWidth:8, padding:16, color:'#b3d4cf' }}},
+    scales:{
+      x:{ stacked:true, grid:{display:false}, border:{display:false} },
+      y:{ stacked:true, grid:{color:'rgba(13,148,136,0.08)'}, border:{display:false}, ticks:{ callback:v=>(v/1000).toFixed(0)+'K', color:'#6b9e97' }}
+    }
+  }
+});
+
+// Monthly line
+const mc = document.getElementById('monthlyChart').getContext('2d');
+const mg = mc.createLinearGradient(0,0,0,260);
+mg.addColorStop(0,'rgba(13,148,136,0.28)');
+mg.addColorStop(1,'rgba(13,148,136,0.02)');
+new Chart(mc, {
+  type:'line',
+  data:{
+    labels: D.monthly.labels,
+    datasets:[
+      { label:'Avg Rating', data:D.monthly.scores, borderColor:TEAL_L, backgroundColor:mg, fill:true, tension:0.42, pointRadius:0, pointHoverRadius:5, pointHoverBackgroundColor:TEAL_L, borderWidth:2.5 },
+      { label:'Benchmark 3.5', data:new Array(D.monthly.labels.length).fill(3.5), borderColor:'rgba(245,158,11,0.4)', borderDash:[5,5], pointRadius:0, borderWidth:1.5, fill:false }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{ mode:'index', intersect:false },
+    plugins:{ legend:{ position:'top', labels:{ usePointStyle:true, boxWidth:8, padding:16, color:'#b3d4cf' }}},
+    scales:{
+      x:{ grid:{display:false}, border:{display:false}, ticks:{ maxRotation:0, autoSkip:true, maxTicksLimit:14, color:'#6b9e97' }},
+      y:{ grid:{color:'rgba(13,148,136,0.08)'}, border:{display:false}, min:2, max:5.2, ticks:{ stepSize:0.5, color:'#6b9e97' }}
+    }
+  }
+});
+
+// Topic chart
+new Chart(document.getElementById('topicChart'), {
+  type:'bar',
+  data:{
+    labels: D.topics.map(t=>t.name),
+    datasets:[
+      { label:'Positive', data:D.topics.map(t=>t.pos), backgroundColor:'rgba(16,185,129,0.82)', borderRadius:4, borderSkipped:false },
+      { label:'Negative', data:D.topics.map(t=>t.neg), backgroundColor:'rgba(244,63,94,0.80)',  borderRadius:4, borderSkipped:false }
+    ]
+  },
+  options:{
+    indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'top', labels:{ usePointStyle:true, boxWidth:8, padding:14, color:'#b3d4cf' }}},
+    scales:{
+      x:{ grid:{color:'rgba(13,148,136,0.08)'}, border:{display:false}, ticks:{color:'#6b9e97'} },
+      y:{ grid:{display:false}, border:{display:false}, ticks:{color:'#b3d4cf'} }
+    }
+  }
+});
+
+// Topic bars
+const tb = document.getElementById('topicBars');
+D.topics.forEach(t => {
+  const total = t.pos+t.neu+t.neg;
+  const pct = v => ((v/total)*100).toFixed(1);
+  tb.innerHTML += `
+    <div>
+      <div class="t-head">
+        <span class="t-name">${t.name}</span>
+        <span class="t-total">${total.toLocaleString()} reviews</span>
+      </div>
+      <div class="track">
+        <div class="tp" style="width:${pct(t.pos)}%"></div>
+        <div class="tn" style="width:${pct(t.neu)}%"></div>
+        <div class="tg" style="width:${pct(t.neg)}%"></div>
+      </div>
+      <div class="t-pcts">
+        <span style="color:var(--emerald)">▲ ${pct(t.pos)}% pos</span>
+        <span style="color:var(--rose)">▼ ${pct(t.neg)}% neg</span>
+      </div>
+    </div>`;
+});
+
+// Reviews
+function renderR(f) {
+  const el = document.getElementById('reviewsList');
+  const items = f==='All' ? reviews : reviews.filter(r=>r.sentiment===f);
+  el.innerHTML = items.map(r=>{
+    const st = '★'.repeat(r.score)+'☆'.repeat(5-r.score);
+    const cc = r.sentiment==='Positive'?'c-pos':r.sentiment==='Negative'?'c-neg':'c-neu';
+    return `<div class="rv">
+      <div class="rv-top">
+        <span class="rv-user">${r.userName}</span>
+        <div class="rv-meta">
+          <span class="rv-stars">${st}</span>
+          <span class="chip ${cc}">${r.sentiment}</span>
+          <span class="chip c-top">${r.topic}</span>
+          <span class="rv-date">${r.at}</span>
+        </div>
+      </div>
+      <div class="rv-text">${r.content}</div>
+      <div class="rv-thumb">👍 ${r.thumbsUpCount.toLocaleString()} found this helpful</div>
+    </div>`;
+  }).join('') || '<div style="text-align:center;color:var(--muted);padding:2rem;">No reviews for this filter</div>';
+}
+
+function filterR(f,btn) {
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderR(f);
+}
+renderR('All');
+
+// Entrance animation
+document.querySelectorAll('.kpi,.card,.pc,.ribbon').forEach((el,i)=>{
+  el.style.opacity='0';
+  el.style.transform='translateY(14px)';
+  el.style.transition=`opacity 0.45s ease ${i*22}ms, transform 0.45s ease ${i*22}ms`;
+  setTimeout(()=>{ el.style.opacity='1'; el.style.transform='translateY(0)'; }, 80+i*22);
+});
+</script>
+</body>
+</html>

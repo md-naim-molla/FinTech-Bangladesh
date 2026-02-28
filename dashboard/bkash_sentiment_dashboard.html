@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>bKash App Reviews — Sentiment Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --pink: #E2136E;
+    --pink-light: #ff4d9a;
+    --pink-dim: rgba(226,19,110,0.15);
+    --dark: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a25;
+    --surface3: #22222f;
+    --border: rgba(255,255,255,0.07);
+    --text: #f0edf5;
+    --muted: #8b869a;
+    --green: #2de08a;
+    --amber: #f5a623;
+    --red: #ff4560;
+    --blue: #4d8fff;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 15% 0%, rgba(226,19,110,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 85% 100%, rgba(77,143,255,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem;
+    letter-spacing: -0.02em;
+  }
+  .logo-dot {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: var(--pink);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 900; color: white;
+  }
+  .header-meta { font-size: 0.78rem; color: var(--muted); }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--pink-dim); border: 1px solid rgba(226,19,110,0.3);
+    color: var(--pink-light); border-radius: 20px;
+    padding: 3px 12px; font-size: 0.75rem; font-weight: 500;
+  }
+  .badge::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--pink-light); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ─── LAYOUT ─── */
+  main {
+    position: relative; z-index: 1;
+    max-width: 1400px; margin: 0 auto;
+    padding: 2.5rem 2rem 4rem;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 1.2rem;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* Hero intro */
+  .hero {
+    margin-bottom: 2.5rem;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .hero-title {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    line-height: 1.1; letter-spacing: -0.03em;
+  }
+  .hero-title span { color: var(--pink); }
+  .hero-sub { color: var(--muted); font-size: 0.9rem; margin-top: 0.4rem; }
+  .hero-period {
+    font-family: 'Syne', sans-serif; font-size: 0.85rem;
+    color: var(--muted); text-align: right;
+  }
+
+  /* ─── KPI CARDS ─── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem; margin-bottom: 2rem;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.4rem 1.2rem;
+    position: relative; overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .kpi:hover { transform: translateY(-2px); border-color: rgba(226,19,110,0.3); }
+  .kpi-accent {
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    border-radius: 1px;
+  }
+  .kpi-label {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); margin-bottom: 0.5rem;
+  }
+  .kpi-value {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 2rem; line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .kpi-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
+
+  /* ─── CHARTS GRID ─── */
+  .charts-row {
+    display: grid; gap: 1.2rem; margin-bottom: 1.2rem;
+  }
+  .charts-row.two { grid-template-columns: 1fr 1fr; }
+  .charts-row.three { grid-template-columns: 1fr 1fr 1fr; }
+  .charts-row.big-left { grid-template-columns: 2fr 1fr; }
+  .charts-row.big-right { grid-template-columns: 1fr 2fr; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.4rem 1.4rem 1.2rem;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: rgba(226,19,110,0.2); }
+  .card-title {
+    font-family: 'Syne', sans-serif; font-weight: 700;
+    font-size: 0.9rem; margin-bottom: 0.3rem;
+  }
+  .card-desc { font-size: 0.75rem; color: var(--muted); margin-bottom: 1.2rem; }
+  .chart-wrap { position: relative; }
+
+  /* ─── SENTIMENT LEGEND ─── */
+  .legend { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 0.78rem; }
+  .legend-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+
+  /* ─── TOPIC BARS ─── */
+  .topic-list { display: flex; flex-direction: column; gap: 0.85rem; }
+  .topic-row { }
+  .topic-meta { display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 4px; }
+  .topic-name { font-weight: 500; }
+  .topic-count { color: var(--muted); }
+  .track {
+    height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden;
+    display: flex;
+  }
+  .fill-pos { background: var(--green); height: 100%; border-radius: 3px; transition: width 1s cubic-bezier(.22,1,.36,1); }
+  .fill-neu { background: var(--amber); height: 100%; }
+  .fill-neg { background: var(--red); height: 100%; }
+
+  /* ─── POLICY CARDS ─── */
+  .policy-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem; margin-bottom: 2rem;
+  }
+  .policy-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--pink);
+    border-radius: 0 14px 14px 0;
+    padding: 1.2rem 1.2rem 1rem;
+  }
+  .policy-tag {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--pink); font-weight: 600; margin-bottom: 0.5rem;
+  }
+  .policy-title {
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+  }
+  .policy-body { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+  .priority {
+    display: inline-block; margin-top: 0.6rem;
+    font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 20px; font-weight: 600;
+  }
+  .p-high { background: rgba(255,69,96,0.15); color: var(--red); }
+  .p-med { background: rgba(245,166,35,0.15); color: var(--amber); }
+  .p-low { background: rgba(45,224,138,0.15); color: var(--green); }
+
+  /* ─── REVIEWS TABLE ─── */
+  .filter-row {
+    display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.2rem;
+  }
+  .filter-btn {
+    padding: 6px 14px; border-radius: 20px; font-size: 0.75rem;
+    border: 1px solid var(--border); background: transparent; color: var(--muted);
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+  }
+  .filter-btn:hover { border-color: var(--pink); color: var(--text); }
+  .filter-btn.active { background: var(--pink); border-color: var(--pink); color: white; }
+
+  .reviews-list { display: flex; flex-direction: column; gap: 0.8rem; max-height: 520px; overflow-y: auto; padding-right: 4px; }
+  .reviews-list::-webkit-scrollbar { width: 4px; }
+  .reviews-list::-webkit-scrollbar-track { background: transparent; }
+  .reviews-list::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+  .review-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1rem 1.1rem;
+    transition: border-color 0.15s;
+  }
+  .review-item:hover { border-color: rgba(226,19,110,0.25); }
+  .review-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.4rem; }
+  .review-user { font-weight: 500; font-size: 0.85rem; }
+  .review-meta { display: flex; gap: 0.5rem; align-items: center; }
+  .stars { color: #f5a623; font-size: 0.7rem; letter-spacing: 1px; }
+  .review-date { font-size: 0.68rem; color: var(--muted); }
+  .review-chip {
+    font-size: 0.62rem; padding: 2px 8px; border-radius: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .chip-pos { background: rgba(45,224,138,0.12); color: var(--green); }
+  .chip-neu { background: rgba(245,166,35,0.12); color: var(--amber); }
+  .chip-neg { background: rgba(255,69,96,0.12); color: var(--red); }
+  .review-topic { background: var(--surface3); color: var(--muted); font-size: 0.62rem; padding: 2px 8px; border-radius: 10px; }
+  .review-text { font-size: 0.82rem; color: #ccc8d8; line-height: 1.55; }
+  .review-thumbs { font-size: 0.7rem; color: var(--muted); margin-top: 0.4rem; }
+
+  /* ─── INSIGHT BOX ─── */
+  .insight-box {
+    background: linear-gradient(135deg, rgba(226,19,110,0.06) 0%, rgba(10,10,15,0) 60%);
+    border: 1px solid rgba(226,19,110,0.2);
+    border-radius: 16px; padding: 1.4rem;
+    margin-bottom: 2rem;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem;
+  }
+  .insight-item { }
+  .insight-num {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.8rem;
+    color: var(--pink); line-height: 1;
+  }
+  .insight-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; }
+  .insight-note { font-size: 0.78rem; color: var(--text); margin-top: 0.3rem; }
+
+  /* Rating stars display */
+  .rating-display { display: flex; align-items: baseline; gap: 0.5rem; }
+  .rating-big { font-family: 'Syne',sans-serif; font-weight:800; font-size:2.8rem; color:var(--amber); line-height:1; }
+  .rating-small { font-size:0.75rem; color:var(--muted); }
+
+  /* footer */
+  footer {
+    position: relative; z-index: 1; text-align: center;
+    padding: 2rem; color: var(--muted); font-size: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 768px) {
+    .charts-row.two, .charts-row.three, .charts-row.big-left, .charts-row.big-right {
+      grid-template-columns: 1fr;
+    }
+    main { padding: 1.5rem 1rem 3rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot">b</div>
+    bKash Review Analytics
+  </div>
+  <div style="display:flex;align-items:center;gap:1rem;">
+    <span class="header-meta">50,003 reviews · 2020–2026</span>
+    <span class="badge">Sentiment Analysis</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div>
+      <div class="hero-title">User Sentiment<br><span>Intelligence Report</span></div>
+      <div class="hero-sub">Google Play Store reviews · bKash Mobile Financial App · Bangladesh</div>
+    </div>
+    <div class="hero-period">
+      Dataset period<br>
+      <strong>Jan 2020 – Feb 2026</strong>
+    </div>
+  </div>
+
+  <!-- KPI GRID -->
+  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;display:flex;align-items:center;gap:10px;">Overview <span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--pink);"></div>
+      <div class="kpi-label">Total Reviews</div>
+      <div class="kpi-value">50K</div>
+      <div class="kpi-sub">50,003 analysed</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--green);"></div>
+      <div class="kpi-label">Positive</div>
+      <div class="kpi-value" style="color:var(--green);">62.1%</div>
+      <div class="kpi-sub">31,065 reviews</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--red);"></div>
+      <div class="kpi-label">Negative</div>
+      <div class="kpi-value" style="color:var(--red);">31.7%</div>
+      <div class="kpi-sub">15,874 reviews</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--amber);"></div>
+      <div class="kpi-label">Neutral</div>
+      <div class="kpi-value" style="color:var(--amber);">6.1%</div>
+      <div class="kpi-sub">3,064 reviews</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--amber);"></div>
+      <div class="kpi-label">Avg Rating</div>
+      <div class="kpi-value" style="color:var(--amber);">3.54</div>
+      <div class="kpi-sub">out of 5 stars</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--blue);"></div>
+      <div class="kpi-label">5-Star Reviews</div>
+      <div class="kpi-value" style="color:var(--blue);">53.5%</div>
+      <div class="kpi-sub">26,766 reviews</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-accent" style="background:var(--red);"></div>
+      <div class="kpi-label">1-Star Reviews</div>
+      <div class="kpi-value" style="color:var(--red);">27.5%</div>
+      <div class="kpi-sub">13,766 reviews</div>
+    </div>
+  </div>
+
+  <!-- ROW: DONUT + RATING BAR -->
+  <div class="charts-row two">
+    <div class="card">
+      <div class="card-title">Sentiment Distribution</div>
+      <div class="card-desc">Breakdown based on star rating (4-5★ Positive, 3★ Neutral, 1-2★ Negative)</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Positive (62.1%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Negative (31.7%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div> Neutral (6.1%)</div>
+      </div>
+      <div class="chart-wrap" style="height:240px;">
+        <canvas id="donutChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Rating Distribution</div>
+      <div class="card-desc">Number of reviews by star rating (1–5)</div>
+      <div class="chart-wrap" style="height:280px;">
+        <canvas id="ratingChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW: YEARLY TREND -->
+  <div class="charts-row" style="margin-bottom:1.2rem;">
+    <div class="card">
+      <div class="card-title">Yearly Sentiment Trend</div>
+      <div class="card-desc">Volume of positive, neutral, and negative reviews per year</div>
+      <div class="chart-wrap" style="height:280px;">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW: MONTHLY AVG SCORE -->
+  <div class="charts-row" style="margin-bottom:1.2rem;">
+    <div class="card">
+      <div class="card-title">Monthly Average Rating (2022–2026)</div>
+      <div class="card-desc">Tracks average star score month-over-month to surface dips and improvements</div>
+      <div class="chart-wrap" style="height:260px;">
+        <canvas id="monthlyChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW: TOPIC BREAKDOWN + TOPIC SENTIMENT -->
+  <div class="charts-row big-left">
+    <div class="card">
+      <div class="card-title">Issue Topics by Volume</div>
+      <div class="card-desc">Stacked sentiment for each identified complaint category</div>
+      <div class="topic-list" id="topicBars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Topic Sentiment Ratio</div>
+      <div class="card-desc">Positive vs. negative ratio per topic</div>
+      <div class="chart-wrap" style="height:320px;">
+        <canvas id="topicChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY INSIGHTS -->
+  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin:2rem 0 1rem;display:flex;align-items:center;gap:10px;">Key Insights <span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+  <div class="insight-box">
+    <div class="insight-item">
+      <div class="insight-num">2.10</div>
+      <div class="insight-label">Avg rating in Jan 2024</div>
+      <div class="insight-note">Sharpest single-month dip across the 6-year period — likely caused by a major update or outage</div>
+    </div>
+    <div class="insight-item">
+      <div class="insight-num">4.01</div>
+      <div class="insight-label">Avg rating in Dec 2025</div>
+      <div class="insight-note">Best monthly performance on record — suggests product improvements are taking effect</div>
+    </div>
+    <div class="insight-item">
+      <div class="insight-num">47%</div>
+      <div class="insight-label">App Performance negativity rate</div>
+      <div class="insight-note">Crashes, slow loading, and post-update failures are the #1 driver of 1-star reviews</div>
+    </div>
+    <div class="insight-item">
+      <div class="insight-num">55%</div>
+      <div class="insight-label">Login issues are negative</div>
+      <div class="insight-note">OTP failures, PIN problems & post-update login errors generate significant user frustration</div>
+    </div>
+  </div>
+
+  <!-- POLICY RECOMMENDATIONS -->
+  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;display:flex;align-items:center;gap:10px;">Policy Recommendations <span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+  <div class="policy-grid">
+    <div class="policy-card">
+      <div class="policy-tag">App Stability</div>
+      <div class="policy-title">Mandatory Pre-Release Regression Testing</div>
+      <div class="policy-body">Major update drops correlate with sudden spikes in 1-star reviews (e.g., Jan 2024 dip to 2.10 avg). Enforce device-matrix testing across Android versions 9–14 and budget OEMs (Tecno, Infinix, Symphony) before every release.</div>
+      <span class="priority p-high">High Priority</span>
+    </div>
+    <div class="policy-card">
+      <div class="policy-tag">Authentication</div>
+      <div class="policy-title">Biometric Login as Default Option</div>
+      <div class="policy-body">3,427 reviews mention login friction. Users repeatedly request fingerprint/face ID as the default path. Mandate biometric auth rollout across all supported devices and invest in fallback OTP that allows manual entry.</div>
+      <span class="priority p-high">High Priority</span>
+    </div>
+    <div class="policy-card">
+      <div class="policy-tag">Transaction Reliability</div>
+      <div class="policy-title">Failed Transaction SLA Policy</div>
+      <div class="policy-body">5,957 payment-related reviews — the most discussed topic. 43% are negative. Introduce a 24-hour automatic refund SLA for failed/deducted-but-undelivered transactions, and display real-time server status within the app.</div>
+      <span class="priority p-high">High Priority</span>
+    </div>
+    <div class="policy-card">
+      <div class="policy-tag">Customer Support</div>
+      <div class="policy-title">Upgrade Live Support Experience</div>
+      <div class="policy-body">The helpline and live chat are frequent complaints — sessions refresh mid-chat, calls disconnect while navigating IVRS menus. Implement persistent chat sessions, and introduce a callback feature to eliminate wait-time frustration.</div>
+      <span class="priority p-med">Medium Priority</span>
+    </div>
+    <div class="policy-card">
+      <div class="policy-tag">Pricing Transparency</div>
+      <div class="policy-title">Fee Disclosure & Reduction Strategy</div>
+      <div class="policy-body">1,875 charge-related reviews — 55% negative. Users compare service charges to competitors and find bKash expensive. Introduce in-app fee calculators before confirming transactions, and consider a tiered loyalty discount programme.</div>
+      <span class="priority p-med">Medium Priority</span>
+    </div>
+    <div class="policy-card">
+      <div class="policy-tag">Security & Trust</div>
+      <div class="policy-title">Proactive Fraud Prevention Communication</div>
+      <div class="policy-body">394 security-related reviews with nearly 50% negative. Users report unauthorized access and fraud. Launch periodic in-app security tip campaigns, add transaction anomaly alerts, and create a dedicated fraud reporting fast-track.</div>
+      <span class="priority p-med">Medium Priority</span>
+    </div>
+    <div class="policy-card">
+      <div class="policy-tag">UX Improvements</div>
+      <div class="policy-title">UI Modernisation Roadmap</div>
+      <div class="policy-body">1,260 UI/UX reviews — 81% are actually positive or neutral, showing appetite for improvement. Users request better font sizing, cleaner navigation, and balance history visibility. A quarterly design sprint cycle would sustain momentum.</div>
+      <span class="priority p-low">Lower Priority</span>
+    </div>
+    <div class="policy-card">
+      <div class="policy-tag">Monitoring</div>
+      <div class="policy-title">Real-Time Sentiment Monitoring Dashboard</div>
+      <div class="policy-body">The Jan 2024 rating collapse (2.10 avg) could have been caught within hours with automated alerting. Deploy a CI/CD-integrated Play Store review monitor that triggers P1 alerts when 7-day average drops below 3.0.</div>
+      <span class="priority p-low">Lower Priority</span>
+    </div>
+  </div>
+
+  <!-- REVIEW EXPLORER -->
+  <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;display:flex;align-items:center;gap:10px;">Review Explorer <span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+  <div class="card">
+    <div class="card-title">Most Impactful Reviews</div>
+    <div class="card-desc">Top reviews by thumbs-up count — use filters to explore by sentiment</div>
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="filterReviews('All', this)">All</button>
+      <button class="filter-btn" onclick="filterReviews('Positive', this)">Positive</button>
+      <button class="filter-btn" onclick="filterReviews('Neutral', this)">Neutral</button>
+      <button class="filter-btn" onclick="filterReviews('Negative', this)">Negative</button>
+    </div>
+    <div class="reviews-list" id="reviewsList"></div>
+  </div>
+
+</main>
+
+<footer>
+  Built from 50,003 bKash Google Play Store reviews · 2020–2026 · Sentiment derived from star rating classification
+</footer>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────
+const data = {
+  sentiment: { Positive: 31065, Negative: 15874, Neutral: 3064 },
+  ratings: { 1: 13766, 2: 2109, 3: 3064, 4: 4299, 5: 26766 },
+  yearly: {
+    labels: ['2020','2021','2022','2023','2024','2025','2026'],
+    positive: [9596,7622,6420,2908,1880,2330,309],
+    neutral:  [1029, 751, 570, 318, 180, 194,  22],
+    negative: [4518,3775,3726,1288,1398,1064, 105]
+  },
+  monthly: {
+    labels: ['2022-01','2022-02','2022-03','2022-04','2022-05','2022-06','2022-07','2022-08','2022-09','2022-10','2022-11','2022-12',
+             '2023-01','2023-02','2023-03','2023-04','2023-05','2023-06','2023-07','2023-08','2023-09','2023-10','2023-11','2023-12',
+             '2024-01','2024-02','2024-03','2024-04','2024-05','2024-06','2024-07','2024-08','2024-09','2024-10','2024-11','2024-12',
+             '2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12',
+             '2026-01','2026-02'],
+    scores:  [3.41,3.52,3.50,3.46,3.51,3.49,3.42,3.45,3.38,3.52,3.41,3.47,
+              3.55,3.60,3.48,3.67,3.58,3.62,3.71,3.65,3.28,3.51,3.36,3.60,
+              2.10,3.19,3.19,3.27,3.45,3.73,3.62,3.72,2.91,3.21,3.70,3.69,
+              3.44,3.67,3.33,3.60,3.28,3.23,3.46,3.70,3.85,3.75,3.90,4.01,
+              3.93,3.67]
+  },
+  topics: [
+    { name:'Transaction/Payment', pos:2896, neu:513, neg:2548 },
+    { name:'App Performance',     pos:1077, neu:420, neg:2395 },
+    { name:'Login/Auth',          pos: 855, neu:312, neg:2260 },
+    { name:'Charges/Fees',        pos: 669, neu:166, neg:1040 },
+    { name:'UI/UX',               pos:1018, neu: 60, neg: 182 },
+    { name:'Customer Support',    pos: 209, neu: 39, neg: 302 },
+    { name:'Security',            pos: 182, neu: 24, neg: 188 },
+  ]
+};
+
+const reviews = [
+  {userName:"Mahfujur Rahman",content:"For me, without a doubt this is a five star app. It works perfectly, I never faced any problems or bugs so far, and I've been using it for a long time. But I would very much like to see fingerprint support in this app, so we can easily make transitions, and also avoid the risk of someone seeing our pin code. It'd be more secure that way.",score:5,sentiment:"Positive",topic:"App Performance",at:"2020-11-01",thumbsUpCount:33485},
+  {userName:"Basit Karim",content:"Its a well designed app. But it's a request to add an option or feature so that the old balance is shown somewhere in the app. It would be much beneficial if we can see both the old amount in the account and the new one too.",score:4,sentiment:"Positive",topic:"App Performance",at:"2022-09-17",thumbsUpCount:27732},
+  {userName:"Paromita Dey",content:"I am unable to access my linked bank account. When I tried the customer service option, it kept refreshing every 2-3 minutes, leaving me hanging, having me input my information again each time, only to push me out. Then I called the helpline, but the call disconnected before I could go through all the options, charging me 2Tk/min. The whole ordeal has been extremely annoying, inefficient and disappointing.",score:1,sentiment:"Negative",topic:"Customer Support",at:"2025-07-07",thumbsUpCount:17586},
+  {userName:"Konika paul",content:"Now I like the rule of using OTP Code. It makes my account safe. And all other systems are very good. And if possible, adding another transaction feature would be great. Many people in our country don't have credit cards. For that we can't do Google Pay transactions.",score:5,sentiment:"Positive",topic:"Transaction/Payment",at:"2024-02-24",thumbsUpCount:10286},
+  {userName:"Abir Hossen",content:"After updating to the latest version of this app, I cannot log in to my account anymore. Each time I provide my phone number and the operator, I get an error that simply says 'An error occurred. Please try again'. I've checked my network for any issues and I've reinstalled but nothing works.",score:2,sentiment:"Negative",topic:"App Performance",at:"2020-09-21",thumbsUpCount:4109},
+  {userName:"Raktim Ahmed",content:"After updating to the latest version, I cannot log in. Each time I try, I get an error: 'An error occurred. Please try again'. There isn't any issue with network connectivity or device compatibility. I reinstalled 5 times. It's been 4 days and I still can't use bKash.",score:1,sentiment:"Negative",topic:"App Performance",at:"2020-09-09",thumbsUpCount:3763},
+  {userName:"Efrat Hassan",content:"Too heavy app, doesn't run on low net",score:2,sentiment:"Negative",topic:"Other",at:"2021-12-15",thumbsUpCount:3655},
+  {userName:"Hasibul haque farhan",content:"I use bKash regularly and find it very convenient. However, please add support for more debit and credit cards, especially local ones like Dutch-Bangla Nexus Digital Card. Currently, only Visa and MasterCard are accepted, which limits users. Adding variety would make the app more inclusive.",score:5,sentiment:"Positive",topic:"Transaction/Payment",at:"2025-09-22",thumbsUpCount:3624},
+  {userName:"Abul Khair",content:"This app is not working properly now. I tried to transfer money from my bank account twice in the last month. First time, money was debited from my bank account but not deposited. Now I have to wait 10 to 30 working days to get it back.",score:3,sentiment:"Neutral",topic:"Transaction/Payment",at:"2020-07-21",thumbsUpCount:2612},
+  {userName:"Faizaan Khan Chintu",content:"It's a very nice app so far, but when tapping the back key it should go back to the Home page. The app should ask whether the user wants to exit or not. And the exit alert must contain Log Out / Cancel buttons instead of just Exit.",score:3,sentiment:"Neutral",topic:"Login/Authentication",at:"2021-08-01",thumbsUpCount:1930},
+  {userName:"Shuvasish Roy Shuvo",content:"Disappointed! I have been using it for a long time. But over the last few days it's showing 'Sorry, bKash app is only usable in Bangladesh' — though I'm in Bangladesh and I don't use any VPN. It's too irritating. Please fix it ASAP.",score:3,sentiment:"Neutral",topic:"Other",at:"2021-05-19",thumbsUpCount:1587},
+  {userName:"Fazley Hossain Reason",content:"So disappointed with this update. I'm not being able to log in. The OTP verification doesn't work at all — neither automatic detection nor manual input is working. I'm using the registered number and all permissions are given, still no luck.",score:1,sentiment:"Negative",topic:"App Performance",at:"2024-10-22",thumbsUpCount:2408},
+  {userName:"Nayan Chandra Das",content:"This app simplifies financial transactions like never before. It's user-friendly, allowing quick transfers and bill payments without any hassle. The instant notifications ensure I'm always updated on my finances. I particularly appreciate the security features that keep my money safe.",score:5,sentiment:"Positive",topic:"Transaction/Payment",at:"2024-09-21",thumbsUpCount:7213},
+  {userName:"efaz dipon",content:"This app helps a lot in daily life activities. But this app has too much delay problem. Many times the server is down and transactions are delayed. Many people depend on this app for daily transactions and this kind of delay can cause serious harm.",score:1,sentiment:"Negative",topic:"Transaction/Payment",at:"2021-06-14",thumbsUpCount:2395},
+  {userName:"Sonia Afroz",content:"I'd suggest improving the transaction history section — it's not possible to copy/forward the TrxID (which is required for purchases). Also make it available to view our transactions with the numbers/contacts easily and search them. It would be much more user-friendly.",score:3,sentiment:"Neutral",topic:"Transaction/Payment",at:"2022-02-09",thumbsUpCount:1301},
+];
+
+// ─── CHART DEFAULTS ──────────────────────────────────────────────────────
+Chart.defaults.color = '#8b869a';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 11;
+
+// Donut
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Positive','Negative','Neutral'],
+    datasets: [{
+      data: [31065, 15874, 3064],
+      backgroundColor: ['#2de08a','#ff4560','#f5a623'],
+      borderColor: '#111118',
+      borderWidth: 3,
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    cutout: '70%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label}: ${ctx.raw.toLocaleString()} (${(ctx.raw/50003*100).toFixed(1)}%)`
+        }
+      }
+    }
+  }
+});
+
+// Ratings bar
+new Chart(document.getElementById('ratingChart'), {
+  type: 'bar',
+  data: {
+    labels: ['★1','★2','★3','★4','★5'],
+    datasets: [{
+      data: [13766, 2109, 3064, 4299, 26766],
+      backgroundColor: ['#ff4560','#ff7a45','#f5a623','#a3e635','#2de08a'],
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString()} reviews` } } },
+    scales: {
+      x: { grid: { display: false }, border: { display: false } },
+      y: { grid: { color: '#1a1a25' }, border: { display: false }, ticks: { callback: v => (v/1000).toFixed(0)+'K' } }
+    }
+  }
+});
+
+// Yearly trend
+new Chart(document.getElementById('trendChart'), {
+  type: 'bar',
+  data: {
+    labels: data.yearly.labels,
+    datasets: [
+      { label:'Positive', data: data.yearly.positive, backgroundColor:'rgba(45,224,138,0.8)', borderRadius: 4, borderSkipped: false },
+      { label:'Neutral',  data: data.yearly.neutral,  backgroundColor:'rgba(245,166,35,0.7)',  borderRadius: 4, borderSkipped: false },
+      { label:'Negative', data: data.yearly.negative, backgroundColor:'rgba(255,69,96,0.8)',   borderRadius: 4, borderSkipped: false }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position:'top', labels: { usePointStyle:true, boxWidth:8, padding:16 } } },
+    scales: {
+      x: { stacked: true, grid: { display:false }, border: { display:false } },
+      y: { stacked: true, grid: { color:'#1a1a25' }, border: { display:false }, ticks: { callback: v => (v/1000).toFixed(0)+'K' } }
+    }
+  }
+});
+
+// Monthly avg
+const monthlyCtx = document.getElementById('monthlyChart');
+const gradient = monthlyCtx.getContext('2d').createLinearGradient(0,0,0,260);
+gradient.addColorStop(0,'rgba(226,19,110,0.25)');
+gradient.addColorStop(1,'rgba(226,19,110,0)');
+new Chart(monthlyCtx, {
+  type: 'line',
+  data: {
+    labels: data.monthly.labels,
+    datasets: [{
+      label: 'Avg Rating',
+      data: data.monthly.scores,
+      borderColor: '#E2136E',
+      backgroundColor: gradient,
+      fill: true,
+      tension: 0.4,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      pointHoverBackgroundColor: '#E2136E',
+      borderWidth: 2.5
+    },{
+      label: 'Rating = 3.0',
+      data: new Array(50).fill(3.0),
+      borderColor: 'rgba(139,134,154,0.3)',
+      borderDash: [4,4],
+      pointRadius: 0,
+      borderWidth: 1.5,
+      fill: false
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode:'index', intersect: false },
+    plugins: { legend: { position:'top', labels:{ usePointStyle:true, boxWidth:8, padding:16 } } },
+    scales: {
+      x: { grid:{ display:false }, border:{ display:false }, ticks:{ maxRotation:0, autoSkip:true, maxTicksLimit:12 } },
+      y: { grid:{ color:'#1a1a25' }, border:{ display:false }, min:1.5, max:4.5, ticks:{ stepSize:0.5 } }
+    }
+  }
+});
+
+// Topic horizontal chart
+const topicNames = data.topics.map(t => t.name);
+const topicNeg = data.topics.map(t => t.neg);
+const topicPos = data.topics.map(t => t.pos);
+new Chart(document.getElementById('topicChart'), {
+  type: 'bar',
+  data: {
+    labels: topicNames,
+    datasets: [
+      { label:'Positive', data: topicPos, backgroundColor:'rgba(45,224,138,0.8)', borderRadius:4, borderSkipped:false },
+      { label:'Negative', data: topicNeg, backgroundColor:'rgba(255,69,96,0.8)',   borderRadius:4, borderSkipped:false }
+    ]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position:'top', labels:{ usePointStyle:true, boxWidth:8, padding:14 } } },
+    scales: {
+      x: { stacked:false, grid:{ color:'#1a1a25' }, border:{ display:false } },
+      y: { stacked:false, grid:{ display:false }, border:{ display:false } }
+    }
+  }
+});
+
+// Topic stacked bars
+const topicContainer = document.getElementById('topicBars');
+data.topics.forEach(t => {
+  const total = t.pos + t.neu + t.neg;
+  const pct = v => ((v/total)*100).toFixed(1);
+  topicContainer.innerHTML += `
+    <div class="topic-row">
+      <div class="topic-meta">
+        <span class="topic-name">${t.name}</span>
+        <span class="topic-count">${total.toLocaleString()} reviews</span>
+      </div>
+      <div class="track">
+        <div class="fill-pos" style="width:${pct(t.pos)}%" title="Positive: ${t.pos}"></div>
+        <div class="fill-neu" style="width:${pct(t.neu)}%" title="Neutral: ${t.neu}"></div>
+        <div class="fill-neg" style="width:${pct(t.neg)}%" title="Negative: ${t.neg}"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:3px;">
+        <span style="font-size:0.65rem;color:var(--green)">▸ ${pct(t.pos)}% positive</span>
+        <span style="font-size:0.65rem;color:var(--red)">▸ ${pct(t.neg)}% negative</span>
+      </div>
+    </div>`;
+});
+
+// ─── REVIEWS ────────────────────────────────────────────────────────────
+function renderReviews(filter) {
+  const list = document.getElementById('reviewsList');
+  const filtered = filter === 'All' ? reviews : reviews.filter(r => r.sentiment === filter);
+  list.innerHTML = filtered.map(r => {
+    const stars = '★'.repeat(r.score) + '☆'.repeat(5-r.score);
+    const chipClass = r.sentiment === 'Positive' ? 'chip-pos' : r.sentiment === 'Negative' ? 'chip-neg' : 'chip-neu';
+    return `
+      <div class="review-item">
+        <div class="review-header">
+          <span class="review-user">${r.userName}</span>
+          <div class="review-meta">
+            <span class="stars">${stars}</span>
+            <span class="review-chip ${chipClass}">${r.sentiment}</span>
+            <span class="review-topic">${r.topic}</span>
+            <span class="review-date">${r.at}</span>
+          </div>
+        </div>
+        <div class="review-text">${r.content}</div>
+        <div class="review-thumbs">👍 ${r.thumbsUpCount.toLocaleString()} found this helpful</div>
+      </div>`;
+  }).join('') || '<div style="color:var(--muted);text-align:center;padding:2rem;">No reviews for this filter</div>';
+}
+
+function filterReviews(filter, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderReviews(filter);
+}
+
+renderReviews('All');
+
+// ─── ENTRANCE ANIMATION ─────────────────────────────────────────────────
+document.querySelectorAll('.kpi,.card,.policy-card,.insight-item').forEach((el, i) => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(18px)';
+  el.style.transition = `opacity 0.5s ease ${i*30}ms, transform 0.5s ease ${i*30}ms`;
+  setTimeout(() => { el.style.opacity='1'; el.style.transform='translateY(0)'; }, 100 + i*30);
+});
+</script>
+</body>
+</html>
